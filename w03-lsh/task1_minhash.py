@@ -30,7 +30,10 @@ BOOK_HASHES = [lambda r: (r + 1) % 5, lambda r: (3 * r + 1) % 5]
 
 def jaccard(a, b):
     """|a and b| / |a or b|. Empty union is 0, not an error."""
-    raise NotImplementedError("jaccard similarity")
+    union = a | b
+    if not union:
+        return 0
+    return len(a & b) / len(union)
 
 
 def minhash_signatures(columns, hashes, n_rows):
@@ -41,14 +44,26 @@ def minhash_signatures(columns, hashes, n_rows):
 
     The algorithm in §3.3.5 walks each row **once** and updates the signature
     of every column that has a 1 in it:
-
+ 
         sig[h][c] = min(sig[h][c], h(r))
 
     Doing it that way is the point. If you sort or re-scan per column you have
     written something correct that does not survive a dataset that does not fit
     in memory, and not fitting in memory is what this course is about.
     """
-    raise NotImplementedError("signature matrix")
+    n_hashes = len(hashes)
+    n_cols = len(columns)
+    sig = [[float("inf")] * n_cols for _ in range(n_hashes)]
+
+    for r in range(n_rows):                       # each row visited exactly once
+        hash_vals = [h(r) for h in hashes]
+        for c in range(n_cols):
+            if r in columns[c]:                    # this row has a 1 in column c
+                for hi in range(n_hashes):
+                    if hash_vals[hi] < sig[hi][c]:
+                        sig[hi][c] = hash_vals[hi]
+
+    return [[sig[hi][c] for hi in range(n_hashes)] for c in range(n_cols)]
 
 
 def lsh_candidates(signatures, bands):
@@ -59,8 +74,37 @@ def lsh_candidates(signatures, bands):
 
     The signature length must divide evenly by `bands`, or you have to decide
     what to do with the remainder. Say what you decided.
+
+    R5 decision: when `n_hashes` does not divide evenly by `bands`, the
+    leftover rows are spread across the *first* bands, one extra row each,
+    instead of being dropped or dumped into one oversized last band. Every
+    hash row still takes part in exactly one band (no signal thrown away),
+    and no single band is more than one row longer than the others, so no
+    band's bucket keys are disproportionately easy or hard to match.
     """
-    raise NotImplementedError("LSH candidate pairs")
+    n_cols = len(signatures)
+    if n_cols == 0:
+        return set()
+    n_hashes = len(signatures[0])
+    base, extra = divmod(n_hashes, bands)
+
+    candidates = set()
+    start = 0
+    for b in range(bands):
+        size = base + (1 if b < extra else 0)
+        end = start + size
+        buckets = {}
+        for c in range(n_cols):
+            key = tuple(signatures[c][start:end])
+            buckets.setdefault(key, []).append(c)
+        for cols in buckets.values():
+            for x in range(len(cols)):
+                for y in range(x + 1, len(cols)):
+                    i, j = cols[x], cols[y]
+                    candidates.add((i, j) if i < j else (j, i))
+        start = end
+
+    return candidates
 
 
 # ------------------------------------------------------------------- harness

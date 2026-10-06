@@ -60,8 +60,41 @@ class YourFinder:
     You may reuse your Task 1 code.
     """
 
-    def __init__(self, threshold):
-        raise NotImplementedError("write your finder")
+    # n=128 hashes split into b=32 bands of r=4 rows. At the threshold 0.6,
+    # the S-curve 1-(1-s^r)^b sits at ~99.8% candidate probability (barely
+    # any missed pairs); for the near-zero similarity of two unrelated random
+    # documents it is astronomically small (almost no wasted comparisons).
+    # See observation.md for the arithmetic.
+    N_HASHES = 128
+    BANDS = 32
+
+    def __init__(self, threshold, n_hashes=N_HASHES, bands=BANDS, seed=20260923):
+        self.threshold = threshold
+        self.n_hashes = n_hashes
+        self.bands = bands
+        self.seed = seed
 
     def find(self, docs, similarity):
-        raise NotImplementedError
+        import random
+        from task1_minhash import minhash_signatures, lsh_candidates
+
+        if not docs:
+            return set()
+
+        n_rows = max((e for doc in docs for e in doc), default=-1) + 1
+        p = 4_294_967_311  # prime above 2**32, comfortably above any shingle id
+        rng = random.Random(self.seed)
+        hashes = []
+        for _ in range(self.n_hashes):
+            a = rng.randrange(1, p)
+            b = rng.randrange(0, p)
+            hashes.append(lambda r, a=a, b=b: (a * r + b) % p)
+
+        sig = minhash_signatures(docs, hashes, n_rows)
+        candidates = lsh_candidates(sig, self.bands)
+
+        out = set()
+        for i, j in candidates:
+            if similarity(docs[i], docs[j]) >= self.threshold:
+                out.add((i, j))
+        return out

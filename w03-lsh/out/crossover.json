@@ -1,0 +1,126 @@
+{
+  "runs": [
+    {
+      "n": 125,
+      "brute_s": 0.035895375011023134,
+      "brute_calls": 7750,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 0.9168972090119496,
+      "lsh_calls": 0,
+      "lsh_peak_bytes": 708395
+    },
+    {
+      "n": 250,
+      "brute_s": 0.10441091598477215,
+      "brute_calls": 31125,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 0.5316496660234407,
+      "lsh_calls": 0,
+      "lsh_peak_bytes": 1174019
+    },
+    {
+      "n": 500,
+      "brute_s": 0.4359102920861915,
+      "brute_calls": 124750,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 0.8037163330009207,
+      "lsh_calls": 0,
+      "lsh_peak_bytes": 1896720
+    },
+    {
+      "n": 700,
+      "brute_s": 0.8248141250805929,
+      "brute_calls": 244650,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 0.9955559999216348,
+      "lsh_calls": 1,
+      "lsh_peak_bytes": 2432408
+    },
+    {
+      "n": 800,
+      "brute_s": 1.0666297499556094,
+      "brute_calls": 319600,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 1.1343641249695793,
+      "lsh_calls": 1,
+      "lsh_peak_bytes": 2723667
+    },
+    {
+      "n": 900,
+      "brute_s": 1.374618542031385,
+      "brute_calls": 404550,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 1.2636724999174476,
+      "lsh_calls": 1,
+      "lsh_peak_bytes": 2939280
+    },
+    {
+      "n": 1000,
+      "brute_s": 1.695909042027779,
+      "brute_calls": 499500,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 1.2412821248872206,
+      "lsh_calls": 1,
+      "lsh_peak_bytes": 3184936
+    },
+    {
+      "n": 1100,
+      "brute_s": 2.0074322499567643,
+      "brute_calls": 604450,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 1.299664458958432,
+      "lsh_calls": 1,
+      "lsh_peak_bytes": 3426552
+    },
+    {
+      "n": 1200,
+      "brute_s": 2.407574167009443,
+      "brute_calls": 719400,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 1.3840135829523206,
+      "lsh_calls": 1,
+      "lsh_peak_bytes": 3666056
+    },
+    {
+      "n": 1500,
+      "brute_s": 3.7418678749818355,
+      "brute_calls": 1124250,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 1.7413424579426646,
+      "lsh_calls": 1,
+      "lsh_peak_bytes": 4373136
+    },
+    {
+      "n": 2000,
+      "brute_s": 6.683800542028621,
+      "brute_calls": 1999000,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 2.2553708750056103,
+      "lsh_calls": 2,
+      "lsh_peak_bytes": 5520448
+    },
+    {
+      "n": 4000,
+      "brute_s": 27.56880354101304,
+      "brute_calls": 7998000,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 5.416853417060338,
+      "lsh_calls": 18,
+      "lsh_peak_bytes": 10004755
+    },
+    {
+      "n": 8000,
+      "brute_s": 110.98212916706689,
+      "brute_calls": 31996000,
+      "brute_peak_bytes": 6576,
+      "lsh_s": 13.931272250018083,
+      "lsh_calls": 50,
+      "lsh_peak_bytes": 18637936
+    }
+  ],
+  "machine": {
+    "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "python": "3.14.7"
+  }
+}

@@ -16,10 +16,23 @@ from Task 1 and Task 3.
 
 Write down where it hurts. That is the deliverable.
 """
-import argparse, json, os, platform, time, tracemalloc
+import argparse, json, os, platform, random, time, tracemalloc
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
+
+
+def build_docs(n, seed=246):
+    """n documents of bench.py's own shape (60 shingles out of a 5,000 vocab).
+
+    bench.build() always returns a fixed 2,120 documents (2,000 base +
+    120 planted near-duplicates) - slicing it with `[:n]` silently caps out
+    at 2,120 no matter how large `--sizes` asks for, which is why this does
+    its own scalable generation instead of reusing it for sizes above that.
+    """
+    import bench
+    rng = random.Random(seed)
+    return [set(rng.sample(range(bench.VOCAB), bench.SHINGLES)) for _ in range(n)]
 
 
 def machine():
@@ -58,7 +71,7 @@ def main():
 
     rows = []
     for n in [int(x) for x in a.sizes.split(",")]:
-        docs = bench.build()[:n]
+        docs = build_docs(n)
         sim = bench.Counter()
         _, t_brute, m_brute = timed(BruteForce(a.threshold).find, docs, sim)
         c_brute = sim.calls
