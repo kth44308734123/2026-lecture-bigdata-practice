@@ -63,3 +63,18 @@ this 16 GB machine — say, 4 GB of peak memory — would take roughly
 hardware, "exact stops fitting" is a real but *distant* point, not a nearby
 one, and reaching it for real was outside what this session's time budget
 justified for one data point whose direction was already established.
+
+## Extra measured point — exact only, n = 51,200,000 (2026-10-13)
+
+To check the extrapolation, `exact_distinct()` from `task2_limits.py` was run
+alone (FM skipped, same `tracemalloc` measurement) at 8× the largest size above.
+It is not in `limits.json`, which is left as the script produced it.
+
+| n | true distinct | exact (s) | exact peak (tracemalloc) | process max RSS |
+|---:|---:|---:|---:|---:|
+| 51,200,000 | 18,799,271 | 46.6 | 1.52 GB | 2.47 GB |
+
+Memory matched the linear prediction (≈29.7 bytes/item vs 29.3); time came in
+faster than predicted (0.91 µs/item vs 1.14). At this size exact was close to a
+minute of waiting while using under a tenth of the 16 GB, so on this machine
+**time runs out first** — roughly 10× earlier than memory.
