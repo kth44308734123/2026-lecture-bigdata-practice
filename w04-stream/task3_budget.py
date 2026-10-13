@@ -17,7 +17,7 @@ The whole point of this structure is that "no" means no. A filter that gets a
 better score by occasionally forgetting something it was given has not improved
 anything, it has broken the contract.
 """
-import hashlib
+import hashlib, math
 
 
 class NaiveFilter:
@@ -65,13 +65,36 @@ class YourFilter:
     """
 
     def __init__(self, n_bits, seed=246):
-        raise NotImplementedError("write your filter")
+        # bench.py always inserts exactly N_INSERT items - that count is a
+        # fixed constant of this exercise, not a runtime guess, so k is
+        # derived from it rather than picked by trial and error. §4.4.2's
+        # false-positive rate (1 - e^(-kn/m))^k is minimised at the real
+        # number k* = (m/n)*ln(2); rounding it to the nearest integer is the
+        # closest a real filter (whole hash functions only) can get.
+        from bench import N_INSERT
+        self.n_bits = n_bits
+        self.seed = seed
+        k_star = (n_bits / N_INSERT) * math.log(2)
+        self.k = max(1, round(k_star))
+        # One bit per position, packed 8 to a byte: 80,000 bits really is
+        # 10,000 bytes. bytearray(n_bits) would spend a whole byte per bit.
+        self.bits = bytearray((n_bits + 7) // 8)
+
+    def _positions(self, item):
+        base = str(item).encode()
+        for i in range(self.k):
+            d = hashlib.blake2b(base, digest_size=8,
+                                 key=f"{self.seed}-{i}".encode()).digest()
+            yield int.from_bytes(d, "big") % self.n_bits
 
     def add(self, item):
-        raise NotImplementedError
+        for pos in self._positions(item):
+            self.bits[pos >> 3] |= 1 << (pos & 7)
 
     def __contains__(self, item):
-        raise NotImplementedError
+        return all(self.bits[pos >> 3] & (1 << (pos & 7))
+                   for pos in self._positions(item))
 
     def memory_bits(self):
-        raise NotImplementedError
+        # Counted from the storage actually allocated, not from the budget.
+        return 8 * len(self.bits)

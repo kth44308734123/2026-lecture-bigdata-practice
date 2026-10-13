@@ -13,7 +13,7 @@ approximating.
 
     python3 task1_sketches.py --verify
 """
-import argparse, random
+import argparse, hashlib, math, random
 
 
 class BloomFilter:
@@ -28,13 +28,30 @@ class BloomFilter:
     """
 
     def __init__(self, m, k, seed=246):
-        raise NotImplementedError("write the Bloom filter")
+        self.m = m
+        self.k = k
+        self.seed = seed
+        self.bits = bytearray((m + 7) // 8)
+
+    def _positions(self, item):
+        # k separately salted digests give deterministic bit positions.
+        base = str(item).encode()
+        for i in range(self.k):
+            d = hashlib.blake2b(base, digest_size=8,
+                                 key=f"{self.seed}-{i}".encode()).digest()
+            yield int.from_bytes(d, "big") % self.m
 
     def add(self, item):
-        raise NotImplementedError
+        for pos in self._positions(item):
+            self.bits[pos >> 3] |= 1 << (pos & 7)
 
     def __contains__(self, item):
-        raise NotImplementedError
+        # Never a false negative: every bit an insert set stays set, so an
+        # item that was added always finds all k of its bits still 1. The
+        # only way to answer "no" here is to see an unset bit, which can only
+        # happen for something that never set it.
+        return all(self.bits[pos >> 3] & (1 << (pos & 7))
+                   for pos in self._positions(item))
 
     def expected_fp_rate(self, n_inserted):
         """The textbook's predicted false-positive rate after n insertions.
@@ -42,7 +59,7 @@ class BloomFilter:
         §4.4.2 derives it. Return the number, do not measure it - the harness
         measures separately and compares the two.
         """
-        raise NotImplementedError
+        return (1 - math.exp(-self.k * n_inserted / self.m)) ** self.k
 
 
 def flajolet_martin(stream, n_hashes=64, seed=246):
@@ -66,8 +83,65 @@ def flajolet_martin(stream, n_hashes=64, seed=246):
     reliably is the requirement; getting closer than that is not expected here.
 
     Return your estimate as a float.
+
+    Implementation note: this hashes each item **once**, not `n_hashes`
+    times. §4.5.3's "grouping" is built by using part of that single hash to
+    route the item into one of `n_hashes` buckets (stochastic averaging,
+    the same trick behind LogLog/HyperLogLog) and the rest of it for the
+    trailing-zero count in that bucket. An earlier version of this function
+    computed a genuinely separate hash per item *per* bucket - correct, but
+    O(n_hashes) Python-level work per stream element, which made Task 2's
+    multi-million-item streams unworkably slow. One hash per item, routed
+    once, gives the same set of independent-ish R-estimates for O(1) work
+    per item.
     """
-    raise NotImplementedError("write Flajolet-Martin")
+    if n_hashes <= 0:
+        raise ValueError("n_hashes must be positive")
+    n_buckets = n_hashes
+    route_bits = (n_buckets - 1).bit_length()
+    n_buckets = 1 << route_bits  # round up to a power of two for a clean mask
+    route_mask = n_buckets - 1
+    max_trailing = [0] * n_buckets
+    key = str(seed).encode()
+    seen = False
+
+    for item in stream:
+        seen = True
+        h = int.from_bytes(
+            hashlib.blake2b(str(item).encode(), digest_size=8, key=key).digest(),
+            "big")
+        bucket = h & route_mask       # low bits: which of the n_buckets substreams
+        rest = h >> route_bits        # remaining bits: this substream's trailing zeros
+        tz = (64 - route_bits) if rest == 0 else (rest & -rest).bit_length() - 1
+        if tz > max_trailing[bucket]:
+            max_trailing[bucket] = tz
+
+    # Each bucket only ever saw about 1/n_buckets of the distinct items (the
+    # routing hash partitions them uniformly), so each bucket's own R
+    # estimates roughly distinct/n_buckets, and 2^(mean R) undoes that
+    # exponent-of-a-count relationship. §4.5.3: group buckets, average R
+    # *within* a group before exponentiating (averaging exponents, not
+    # already-exponential 2^R, keeps one lucky bucket's outlier R from
+    # dragging a linear sum up by a factor of 2^(that outlier) - tried
+    # averaging 2^R directly here first and it measured 3x worse), then take
+    # the *median* across groups to tame one unlucky group. Multiplying the
+    # combined per-bucket estimate back up by n_buckets undoes the partition.
+    if not seen:
+        return 0.0
+    n_groups = max(1, int(math.sqrt(n_buckets)))
+    group_size = max(1, n_buckets // n_groups)
+    group_estimates = []
+    for g in range(0, n_buckets, group_size):
+        chunk = max_trailing[g:g + group_size]
+        group_estimates.append(2 ** (sum(chunk) / len(chunk)))
+
+    group_estimates.sort()
+    mid = len(group_estimates) // 2
+    if len(group_estimates) % 2:
+        per_bucket = group_estimates[mid]
+    else:
+        per_bucket = (group_estimates[mid - 1] + group_estimates[mid]) / 2
+    return per_bucket * n_buckets
 
 
 def reservoir_sample(stream, k, seed=246):
@@ -78,7 +152,16 @@ def reservoir_sample(stream, k, seed=246):
 
     Return a list of k items (or fewer if the stream was shorter).
     """
-    raise NotImplementedError("write reservoir sampling")
+    rng = random.Random(seed)
+    reservoir = []
+    for i, item in enumerate(stream):  # i is 0-based; i+1 items seen so far
+        if i < k:
+            reservoir.append(item)
+        else:
+            j = rng.randrange(0, i + 1)
+            if j < k:
+                reservoir[j] = item
+    return reservoir
 
 
 # ------------------------------------------------------------------- harness
