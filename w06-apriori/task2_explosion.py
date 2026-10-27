@@ -27,11 +27,16 @@ def machine():
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--supports", default="400,200,100,50,25")
+    p.add_argument("--smoke", action="store_true",
+                   help="small correctness run; writes out/smoke/, not submission measurements")
     a = p.parse_args()
-    os.makedirs(OUT, exist_ok=True)
+    out = os.path.join(OUT, "smoke") if a.smoke else OUT
+    os.makedirs(out, exist_ok=True)
 
     import bench
     from task3_pcy import PlainApriori
+    if a.smoke:
+        bench.BASKETS, bench.ITEMS, bench.AVG = 300, 100, 8
     baskets = bench.build()
 
     rows = []
@@ -52,13 +57,17 @@ def main():
               f"counters {algo.peak_counters:>10,}   "
               f"{elapsed:>7.2f}s   {peak_bytes / 1e6:>8.1f} MB")
 
-    path = os.path.join(OUT, "explosion.json")
+    path = os.path.join(out, "explosion.json")
     prior = json.load(open(path)) if os.path.exists(path) else {"runs": []}
     prior["machine"] = machine()
+    prior["dataset"] = {"baskets": len(baskets), "items": bench.ITEMS,
+                        "average_items": bench.AVG, "seed": bench.SEED,
+                        "scope": "smoke" if a.smoke else "assignment"}
     prior["runs"].extend(rows)
     json.dump(prior, open(path, "w"), indent=2)
-    print(f"\n  -> out/explosion.json  ({len(prior['runs'])} run(s))")
-    print("  Keep halving the support until it is unbearable. Record where.")
+    print(f"\n  -> {os.path.relpath(path, HERE)}  ({len(prior['runs'])} run(s))")
+    print("  Smoke test only; full measurements deferred." if a.smoke else
+          "  Keep halving the support until it is unbearable. Record where.")
 
 
 if __name__ == "__main__":
